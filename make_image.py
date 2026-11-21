@@ -97,98 +97,142 @@ def _rule(draw, x0, y, x1, fill=INK, width=1):
     draw.line([(x0, y), (x1, y)], fill=fill, width=width)
 
 
+def _fit_headline(draw, text, width, start=15):
+    """Shrink a headline until it fits one line, else truncate with ellipsis."""
+    size = start
+    while size > 11:
+        font = serif_bold(size)
+        if draw.textlength(text, font=font) <= width:
+            return font, text
+        size -= 1
+    font = serif_bold(11)
+    while len(text) > 4 and draw.textlength(text + "…", font=font) > width:
+        text = text[:-1]
+    return font, text + "…"
+
+
+def _body_two_lines(draw, text, font, width, leading, x, y):
+    """Draw at most two wrapped lines; truncate the second with ellipsis."""
+    lines = _wrap(draw, text, font, width)
+    if len(lines) > 2:
+        lines = lines[:2]
+        while len(lines[1]) > 4 and draw.textlength(lines[1] + "…", font=font) > width:
+            lines[1] = lines[1][:-1]
+        lines[1] = lines[1] + "…"
+    for line in lines:
+        draw.text((x, y), line, font=font, fill=INK)
+        y += leading
+    return y
+
+
 def render(path):
     img = Image.new("RGB", (W, H), PAPER)
     d = ImageDraw.Draw(img)
 
     # ---- Masthead ----
-    d.text((512, 20), "THE WORLD", font=serif_bold(88), fill=INK, anchor="ma")
-    _tracked_centered(d, 512, 122, "IN ONE IMAGE", serif_bold(28), INK, 14)
-    _rule(d, 44, 164, 980, INK, 3)
-    _rule(d, 44, 170, 980, INK, 1)
-    d.text((512, 180), "SATURDAY \u00b7 21 NOVEMBER 2026", font=serif_bold(27), fill=RED, anchor="ma")
-    _rule(d, 44, 222, 980, RED, 2)
+    d.text((512, 10), "THE WORLD", font=serif_bold(72), fill=INK, anchor="ma")
+    _tracked_centered(d, 512, 88, "IN ONE IMAGE", serif_bold(22), INK, 10)
+    _rule(d, 36, 116, 988, INK, 3)
+    _rule(d, 36, 122, 988, INK, 1)
+    d.text((512, 130), "SATURDAY \u00b7 21 NOVEMBER 2026", font=serif_bold(22), fill=RED, anchor="ma")
+    _rule(d, 36, 158, 988, RED, 2)
 
     # ---- Lead: Geneva, killer robots ----
-    d.text((44, 236), "GENEVA \u2014 TOP STORY", font=sans_bold(24), fill=RED)
-    y = _lines(d, 44, 266, "UN states agree to draft \u2018killer robot\u2019 rules by 2028",
-               serif_bold(38), INK, 520, 43)
-    y = _lines(d, 44, y + 8,
+    d.text((36, 168), "GENEVA \u2014 TOP STORY", font=sans_bold(17), fill=RED)
+    hl_font, hl_text = _fit_headline(
+        d, "UN states agree to draft \u2018killer robot\u2019 rules by 2028", 952, start=32)
+    d.text((36, 190), hl_text, font=hl_font, fill=INK)
+    y = _lines(d, 36, 228,
                "128 countries at the UN weapons convention in Geneva agreed "
                "early on Saturday to spend two years drawing up rules on AI "
                "weapons that kill without human control.",
-               serif(20), INK, 520, 25)
-    d.text((44, y + 8), "Only to \u2018elaborate\u2019, not negotiate.", font=serif_bold(21), fill=RED)
+               serif(15), INK, 952, 19)
+    d.text((36, y + 4), "Only to \u2018elaborate\u2019, not negotiate \u2014 Russia blocked the binding word.",
+           font=serif_bold(16), fill=RED)
+    _rule(d, 36, y + 28, 988, INK, 2)
+    grid_top = y + 38
 
-    # ---- Lead panel: globe over Geneva ----
-    d.rectangle([600, 236, 980, 516], fill=NAVY)
-    cx, cy, r = 790, 348, 66
-    for sx, sy in [(640, 262), (700, 300), (930, 282), (900, 330), (660, 420), (940, 430)]:
-        d.ellipse([sx - 2, sy - 2, sx + 2, sy + 2], fill=LIGHT)
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=LIGHT, width=3)
-    d.ellipse([cx - 28, cy - r, cx + 28, cy + r], outline=LIGHT, width=2)
-    d.ellipse([cx - 58, cy - r + 18, cx + 58, cy + r - 18], outline=LIGHT, width=2)
-    d.line([(cx - r, cy), (cx + r, cy)], fill=LIGHT, width=2)
-    d.line([(cx - 52, cy - 40), (cx + 52, cy - 40)], fill=LIGHT, width=2)
-    d.line([(cx - 52, cy + 40), (cx + 52, cy + 40)], fill=LIGHT, width=2)
-    d.rectangle([600, 458, 980, 516], fill=STEEL)
-    d.text((790, 466), "Russia blocked the word", font=sans_bold(20), fill=LIGHT, anchor="ma")
-    d.text((790, 490), "\u2018negotiate\u2019", font=sans_bold(20), fill=LIGHT, anchor="ma")
-
-    _rule(d, 44, 552, 980, INK, 2)
-
-    # ---- Markets: Wall Street correction ----
-    d.text((44, 566), "MARKETS", font=sans_bold(24), fill=RED)
-    y = _lines(d, 44, 594, "Wall Street slides into correction",
-               serif_bold(36), INK, 456, 42)
-    y = _lines(d, 44, y + 8,
-               "S&P 500 fell 3.7% on Friday and the Dow 1.9%, both now "
-               "more than 10% below their peaks as the AI sell-off deepened.",
-               serif(19), INK, 456, 22)
-    base = 810
-    for i, h in enumerate((48, 36, 22)):
-        x0 = 44 + i * 76
-        d.rectangle([x0, base - h, x0 + 52, base], fill=RED if i < 2 else GOLD)
-    _rule(d, 44, base, 300, INK, 2)
-    d.text((300, 762), "-3.7%", font=serif_bold(38), fill=RED)
-
-    # ---- Riyadh: Houthi missiles intercepted ----
-    d.text((540, 566), "RIYADH", font=sans_bold(24), fill=RED)
-    y = _lines(d, 540, 594, "Houthis fire at Riyadh again",
-               serif_bold(30), INK, 440, 38)
-    y = _lines(d, 540, y + 8,
-               "Saudi air defences downed three Houthi ballistic missiles "
-               "over Riyadh early on Saturday.",
-               serif(19), INK, 440, 22)
-    # skyline silhouette
-    for x0, w, h in [(540, 34, 22), (582, 26, 34), (616, 40, 26), (664, 24, 18), (696, 30, 30)]:
-        d.rectangle([x0, 806 - h, x0 + w, 806], fill=NAVY)
-    # missile trail + interception burst
-    d.line([(700, 736), (652, 776)], fill=GOLD, width=3)
-    d.ellipse([640, 764, 664, 788], fill=GOLD)
-    for dx, dy in [(0, -18), (0, 18), (-18, 0), (18, 0),
-                   (-13, -13), (13, -13), (-13, 13), (13, 13)]:
-        d.line([(652, 776), (652 + dx, 776 + dy)], fill=GOLD, width=2)
-    d.text((740, 772), "3 missiles", font=serif_bold(34), fill=RED)
-
-    _rule(d, 44, 822, 980, INK, 2)
-
-    # ---- Also on 21 November ----
-    d.text((44, 836), "ALSO ON 21 NOVEMBER", font=sans_bold(27), fill=INK)
-    columns = [
-        ("COP31 \u00b7 ANTALYA", "Talks run into overtime as the draft still omits fossil fuels."),
-        ("FLORIDA", "Record floods swamp the coast; St. Johns River breaks a 73-year record."),
-        ("OMAN", "Two tankers hit near Hormuz; UKMTO reports strikes, no casualties."),
-        ("KRYVYI RIH", "Russia strikes again overnight; two killed, dozens hurt."),
+    # ---- 30 more stories, 3 columns x 10 rows ----
+    items = [
+        ("MARKETS", "Wall Street slides into correction",
+         "S&P 500 fell 3.7% on Friday and the Dow 1.9%, both now over 10% below their peaks."),
+        ("RIYADH", "Houthis fire at Riyadh again",
+         "Saudi air defences downed three Houthi ballistic missiles over Riyadh early on Saturday."),
+        ("GAZA", "22,000 children killed in Gaza",
+         "Gaza's health ministry says over 22,000 Palestinian children have been killed in the war."),
+        ("GAZA", "Israeli strikes kill seven in Gaza",
+         "Seven Palestinians killed, 12 wounded in Israeli attacks across Gaza despite a ceasefire."),
+        ("WHITE HOUSE", "Trump defends Putin ties",
+         "Trump defended his Putin ties after the Shenzhen summit; Zelensky: 'Putin is a killer.'"),
+        ("TEHRAN", "Trump weighs new strikes on Iran",
+         "Trump weighs new strikes on Iran as Israel presses for swift action, officials say."),
+        ("BRUSSELS", "Trump: Europe must defund Ukraine",
+         "Trump told European leaders to stop funding Ukraine after his Putin summit."),
+        ("KYIV", "Kyiv hits Russian missile launchers",
+         "Ukraine says it hit three Russian ballistic missile platforms and an air-defence system."),
+        ("ULAANBAATAR", "Mongolian president resigns",
+         "The president's resignation opens the way for early elections in Mongolia, officials say."),
+        ("MYANMAR", "Myanmar, China reject ICJ ruling",
+         "Myanmar and China protested the World Court's genocide ruling against Myanmar as unjust."),
+        ("TALLINN", "Moscow: Estonia builds 'Iron Curtain'",
+         "Moscow accused Estonia of erecting a new 'Iron Curtain' with border curbs and vowed to respond."),
+        ("TOKYO", "Japan core inflation hits 2.2%",
+         "Japan's core inflation rose to 2.2% in October, official data showed on Saturday."),
+        ("TOKYO", "Japan\u2013China ties hit record low",
+         "Japan was sidelined by China as ties between the two hit a record low, reports say."),
+        ("MADRID", "Spain extends banking tax for housing",
+         "Spain plans to extend its banking tax to fund housing policies, the prime minister said."),
+        ("BERLIN", "Berlin students protest rearmament",
+         "Berlin students protested against rearmament and mandatory military service in the capital."),
+        ("ROME", "Italy clears Tesla self-driving",
+         "Italy gave Tesla's self-driving tech conditional approval ahead of an EU-wide ruling."),
+        ("BRAS\u00cdLIA", "Bolsonaro hospitalised in Bras\u00edlia",
+         "Former president Jair Bolsonaro was hospitalised with an intestinal obstruction, his office said."),
+        ("PORT-AU-PRINCE", "Salvadoran troops killed in Haiti",
+         "Salvadoran troops in Haiti lost soldiers to explosives, officials said on Saturday."),
+        ("WASHINGTON", "FBI crime database 'hacked'",
+         "The FBI's crime database was hacked, CNN reported, amid a week of US outages."),
+        ("CYBER", "USDA hit by cyberattack",
+         "The US Agriculture Department was hit by a cyberattack; the FBI is probing it."),
+        ("CAPITOL", "Senate fast-tracks energy projects",
+         "The US Senate passed a bill fast-tracking energy and datacenter projects by easing green rules."),
+        ("LOS ANGELES", "GTA 6 smashes $4.9bn sales record",
+         "GTA 6 smashed records with nearly $4.9bn in first-day sales, reports said."),
+        ("NEW YORK", "Van Gogh sells for record $190m",
+         "A Van Gogh painting sold for an unprecedented $190m at auction, setting a new record."),
+        ("U.S. COURTS", "Judge backs $7.25bn Roundup deal",
+         "A judge endorsed a $7.25bn settlement for Roundup pesticide cancer claims."),
+        ("BEIRUT", "Europe eyes UN force role in Lebanon",
+         "Europeans push to replace UN peacekeepers in Lebanon as they seek a bigger Middle East role."),
+        ("LAS VEGAS", "Russell takes Las Vegas pole",
+         "George Russell took pole for the Las Vegas Grand Prix, 0.098s clear of Sainz; Verstappen fifth."),
+        ("ANTALYA", "COP31 runs into overtime",
+         "Climate talks ran past their deadline as the draft deal still omits any fossil-fuel phase-out."),
+        ("FLORIDA", "Record floods swamp Florida coast",
+         "Record floods swamped Florida's coast; the St. Johns River broke a 73-year record."),
+        ("MUSCAT", "Two tankers hit near Hormuz",
+         "Two tankers were hit by unknown projectiles near Khasab; no casualties."),
+        ("KRYVYI RIH", "Two killed in Kryvyi Rih strikes",
+         "Russian strikes on Kryvyi Rih killed a child and a paramedic and wounded dozens."),
     ]
-    for i, (kick, text) in enumerate(columns):
-        x = 44 + i * 239
-        d.text((x, 874), kick, font=sans_bold(17), fill=RED)
-        _lines(d, x, 898, text, serif(17), INK, 219, 23)
+    cols = 3
+    margin, gut = 36, 16
+    col_w = (W - 2 * margin - (cols - 1) * gut) // cols
+    grid_bottom = 950
+    row_h = (grid_bottom - grid_top) // 10
+    for idx, (kick, head, body) in enumerate(items):
+        r, c = divmod(idx, cols)
+        x = margin + c * (col_w + gut)
+        cy = grid_top + r * row_h
+        d.text((x, cy), kick, font=sans_bold(11), fill=RED)
+        hf, ht = _fit_headline(d, head, col_w, start=15)
+        d.text((x, cy + 14), ht, font=hf, fill=INK)
+        _body_two_lines(d, body, serif(12), col_w, 14, x, cy + 33)
 
-    _rule(d, 44, 980, 980, INK, 1)
-    d.text((512, 990), "21 NOVEMBER 2026 \u00b7 THE WORLD\u2019S NEWS IN ONE IMAGE",
-           font=serif_bold(19), fill=INK, anchor="ma")
+    # ---- Footer ----
+    _rule(d, 36, 960, 988, INK, 1)
+    d.text((512, 970), "21 NOVEMBER 2026 \u00b7 31 STORIES FROM AROUND THE WORLD",
+           font=serif_bold(16), fill=INK, anchor="ma")
 
     img.save(path, "PNG")
     return path
